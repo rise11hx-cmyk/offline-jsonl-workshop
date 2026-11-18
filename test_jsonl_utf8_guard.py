@@ -52,6 +52,49 @@ class UTF8GuardTests(unittest.TestCase):
         with self.assertRaisesRegex(JSONLValidationError, "Line 1: invalid JSON"):
             count_jsonl(io.BytesIO(b'{"x":\n'))
 
+    def test_bom_is_named_instead_of_generic_invalid_json(self):
+        payload = b'\xef\xbb\xbf{"a":1}\n'
+        with self.assertRaises(JSONLValidationError) as caught:
+            count_jsonl(io.BytesIO(payload))
+        self.assertEqual(
+            str(caught.exception),
+            "Line 1: starts with a UTF-8 byte order mark (BOM)",
+        )
+        self.assertNotIn('"a"', str(caught.exception))
+
+    def test_bom_on_a_later_line_reports_that_line(self):
+        payload = b'{"ok":1}\n\xef\xbb\xbf{"a":1}\n'
+        with self.assertRaises(JSONLValidationError) as caught:
+            count_jsonl(io.BytesIO(payload))
+        self.assertEqual(
+            str(caught.exception),
+            "Line 2: starts with a UTF-8 byte order mark (BOM)",
+        )
+
+    def test_byte_limit_still_wins_over_the_bom_hint(self):
+        record = b'\xef\xbb\xbf{"a":1}'
+        with self.assertRaisesRegex(
+            JSONLValidationError, f"exceeds {len(record) - 1} UTF-8 bytes"
+        ):
+            count_jsonl(io.BytesIO(record + b"\n"), max_bytes=len(record) - 1)
+
+    def test_bom_only_line_is_reported_not_skipped_as_blank(self):
+        with self.assertRaisesRegex(JSONLValidationError, "byte order mark \\(BOM\\)"):
+            count_jsonl(io.BytesIO(b"\xef\xbb\xbf\n"))
+
+    def test_cli_reports_bom_without_echoing_record(self):
+        script = Path(__file__).with_name("jsonl_utf8_guard.py")
+        proc = subprocess.run(
+            [sys.executable, "-B", str(script)],
+            input=b'\xef\xbb\xbf{"secret_token":"s3cr3t"}\n',
+            capture_output=True, timeout=10,
+        )
+        self.assertEqual(proc.returncode, 2)
+        self.assertEqual(proc.stdout, b"")
+        self.assertIn(b"byte order mark (BOM)", proc.stderr)
+        self.assertNotIn(b"s3cr3t", proc.stderr)
+        self.assertNotIn(b"Traceback", proc.stderr)
+
     def test_top_level_array_not_allowed(self):
         with self.assertRaisesRegex(JSONLValidationError, "expected a JSON object"):
             count_jsonl(io.BytesIO(b'[1,2]\n'))

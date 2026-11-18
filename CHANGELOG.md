@@ -4,6 +4,9 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 
 ## [Unreleased]
 
+### Fixed
+- `jsonl_utf8_guard.py` names a UTF-8 byte order mark on the failing line (`Line 1: starts with a UTF-8 byte order mark (BOM)`) instead of the generic `invalid JSON`, so a file saved by Notepad or an Excel export says what to remove. Five regression tests keep the per-line byte limit ahead of the check, cover a BOM on a later line and a BOM-only line, and prove the CLI still exits 2 without echoing the record; `SHA256SUMS` regenerated (#31).
+
 ### Added
 - `--version` flag for `jsonl_utf8_guard.py` and the `jsonl-utf8-guard` console script: prints one line (`jsonl_utf8_guard 0.1.0`) and exits 0 without reading stdin or `--input`. The version is a `__version__` constant kept equal to `pyproject.toml` by a unit test; 7 new CLI tests; `SHA256SUMS` regenerated (#8).
 

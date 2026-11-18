@@ -69,6 +69,12 @@ def iter_jsonl_records(
             raise JSONLValidationError(
                 f"Line {line_number}: invalid UTF-8 encoding"
             ) from exc
+        if text.startswith("\ufeff"):
+            # A BOM makes an otherwise valid record fail inside json.loads; name it
+            # without echoing the record, so the fix (re-save without a BOM) is obvious.
+            raise JSONLValidationError(
+                f"Line {line_number}: starts with a UTF-8 byte order mark (BOM)"
+            )
         try:
             data = json.loads(
                 text,
