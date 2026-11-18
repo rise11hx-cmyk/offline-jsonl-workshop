@@ -17,6 +17,8 @@ Only real, verifiable entries. Each row names the tool actually used. An empty t
 | 2026-11-05 | Claude Code (Anthropic, model Claude Opus 5.5) | Issue #8: add `--version` to the CLI. #8 asked for Codex; the owner chose Claude Code instead, so Codex was not used. Tests written first | [#28](https://github.com/senanurcetin/offline-jsonl-workshop/pull/28) | 7 new CLI tests failed before the change and pass after; 89 tests pass locally; `verify_release.py`, red-green demo, ruff and coverage (78%) pass; `SHA256SUMS` regenerated |
 | 2026-11-05 | Claude Code (Anthropic, model Claude Opus 5.5) | Issue #16: 5-minute TR/EN tutorial on the real workflow used for #8 (Claude Code, not Codex), linked from the README | [#29](https://github.com/senanurcetin/offline-jsonl-workshop/pull/29) | Documentation only; outputs taken from the #28 session; 89 tests, `verify_release.py` and red-green demo pass; `SHA256SUMS` regenerated for the README |
 
+| 2026-11-18 | Doubao desktop agent (DeepSeek V4, local Windows) | Issue #31: name a UTF-8 BOM on the failing line instead of generic `invalid JSON`; tests written first | [#37](https://github.com/senanurcetin/offline-jsonl-workshop/pull/37) | 5 regression tests failed on the previous implementation (4 failures) and pass after; 94 tests, `verify_release.py`, red-green demo and sample CLI pass; ruff 0.16.9, `mypy --strict` and coverage 79% pass locally; `SHA256SUMS` regenerated |
+
 ## How to add an entry
 
 1. Add a row in the same PR as the change. Use the tool you actually used (for example Codex or Claude Code).
