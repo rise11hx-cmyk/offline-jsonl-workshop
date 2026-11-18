@@ -4,6 +4,9 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 
 ## [Unreleased]
 
+### Fixed
+- `--max-bytes` is validated by argparse, so `0` and negative values are a usage error naming the argument (`must be a positive integer, got 0`, exit 2) instead of a `Validation failed:` line that read like bad input. The library check in `iter_jsonl_records` is unchanged for direct callers; a non-number keeps argparse's own message (#41).
+
 ## [0.2.0] - 2026-11-18
 
 ### Added

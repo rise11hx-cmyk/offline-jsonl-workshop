@@ -104,10 +104,21 @@ def count_jsonl(source: BinaryIO, *, max_bytes: int = DEFAULT_MAX_BYTES) -> int:
     return sum(1 for _ in iter_jsonl_records(source, max_bytes=max_bytes))
 
 
+def _positive_int(value: str) -> int:
+    """argparse type for --max-bytes: a base-10 integer at least 1."""
+    try:
+        number = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"invalid int value: {value!r}") from exc
+    if number < 1:
+        raise argparse.ArgumentTypeError(f"must be a positive integer, got {number}")
+    return number
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, help="Input file; omit for stdin")
-    parser.add_argument("--max-bytes", type=int, default=DEFAULT_MAX_BYTES)
+    parser.add_argument("--max-bytes", type=_positive_int, default=DEFAULT_MAX_BYTES)
     parser.add_argument(
         "--version", action="version", version=f"jsonl_utf8_guard {__version__}"
     )

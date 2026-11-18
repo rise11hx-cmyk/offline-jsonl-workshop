@@ -491,9 +491,23 @@ class CLIExitCodeTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 2)
         self.assertEqual(proc.stdout, b"")
 
-    def test_non_positive_max_bytes_exits_two(self):
-        proc = self.run_cli("--max-bytes", "0", stdin=b'{"id":1}\n')
+    def test_non_positive_max_bytes_is_a_usage_error(self):
+        for bad in ("0", "-1", "-1000"):
+            with self.subTest(max_bytes=bad):
+                proc = self.run_cli("--max-bytes", bad, stdin=b'{"id":1}\n')
+                self.assertEqual(proc.returncode, 2)
+                self.assertEqual(proc.stdout, b"")
+                self.assertIn(b"usage: ", proc.stderr)
+                self.assertIn(
+                    b"argument --max-bytes: must be a positive integer", proc.stderr
+                )
+                self.assertNotIn(b"Validation failed", proc.stderr)
+
+    def test_non_integer_max_bytes_keeps_the_argparse_message(self):
+        proc = self.run_cli("--max-bytes", "abc")
         self.assertEqual(proc.returncode, 2)
+        self.assertEqual(proc.stdout, b"")
+        self.assertIn(b"argument --max-bytes: invalid int value: 'abc'", proc.stderr)
 
     def test_oversized_record_exits_two(self):
         proc = self.run_cli("--max-bytes", "8", stdin=b'{"id":123456}\n')
@@ -562,11 +576,20 @@ class CLIExitCodeTests(unittest.TestCase):
         self.assertEqual(proc.stdout.decode("ascii").splitlines(), [self.expected_version_line()])
 
     def test_version_wins_over_other_valid_options_like_argparse(self):
-        for args in (("--version", "--max-bytes", "0"), ("--max-bytes", "0", "--version")):
+        for args in (("--version", "--max-bytes", "8"), ("--max-bytes", "8", "--version")):
             with self.subTest(args=args):
                 proc = self.run_cli(*args, stdin=b'{"id":1}\n')
                 self.assertEqual(proc.returncode, 0, proc.stderr)
                 self.assertEqual(proc.stdout.decode("ascii").splitlines(), [self.expected_version_line()])
+
+    def test_argparse_order_applies_to_an_invalid_max_bytes(self):
+        # argparse converts values as it walks the arguments, so --version only
+        # short-circuits a bad --max-bytes when it comes first (issue #41).
+        proc = self.run_cli("--version", "--max-bytes", "0")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        proc = self.run_cli("--max-bytes", "0", "--version")
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn(b"argument --max-bytes: must be a positive integer", proc.stderr)
 
 
 
