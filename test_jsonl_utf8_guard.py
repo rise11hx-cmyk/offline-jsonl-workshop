@@ -93,8 +93,35 @@ class UTF8GuardTests(unittest.TestCase):
         self.assertEqual(count_jsonl(io.BytesIO(b'{"a":1}\r\n{"b":2}\r')), 2)
 
     def test_top_level_array_not_allowed(self):
-        with self.assertRaisesRegex(JSONLValidationError, "expected a JSON object"):
+        with self.assertRaises(JSONLValidationError) as caught:
             count_jsonl(io.BytesIO(b'[1,2]\n'))
+        self.assertEqual(str(caught.exception), "Line 1: expected a JSON object, got an array")
+
+    def test_non_object_names_the_json_type_not_the_value(self):
+        # One case per JSON type; `bool` must not be reported as a number (#47).
+        cases = [
+            (b"[1,2]\n", "an array"),
+            (b'"secret-token"\n', "a string"),
+            (b"12345\n", "a number"),
+            (b"true\n", "true"),
+            (b"false\n", "false"),
+            (b"null\n", "null"),
+        ]
+        for payload, found in cases:
+            with self.subTest(payload=payload):
+                with self.assertRaises(JSONLValidationError) as caught:
+                    count_jsonl(io.BytesIO(payload))
+                self.assertEqual(
+                    str(caught.exception),
+                    f"Line 1: expected a JSON object, got {found}",
+                )
+        # A value may be sensitive, so it never appears in the message.
+        with self.assertRaises(JSONLValidationError) as caught:
+            count_jsonl(io.BytesIO(b'"secret-token"\n'))
+        self.assertNotIn("secret-token", str(caught.exception))
+        with self.assertRaises(JSONLValidationError) as caught:
+            count_jsonl(io.BytesIO(b"12345\n"))
+        self.assertNotIn("12345", str(caught.exception))
 
     def test_non_finite_number_disallowed(self):
         with self.assertRaisesRegex(

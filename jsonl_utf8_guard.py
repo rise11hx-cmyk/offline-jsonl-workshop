@@ -46,6 +46,23 @@ def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return data
 
 
+def _json_type_name(value: object) -> str:
+    """What was found instead of an object: a JSON type name, never the value (#47).
+
+    A string or number may hold a token or private text, so only the type is reported;
+    `bool` is a subclass of `int` and must be named before the number branch.
+    """
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, list):
+        return "an array"
+    if isinstance(value, str):
+        return "a string"
+    if value is None:
+        return "null"
+    return "a number"
+
+
 def iter_jsonl_records(
     source: BinaryIO, *, max_bytes: int = DEFAULT_MAX_BYTES
 ) -> Iterator[dict[str, Any]]:
@@ -112,7 +129,7 @@ def iter_jsonl_records(
             ) from exc
         if not isinstance(data, dict):
             raise JSONLValidationError(
-                f"Line {line_number}: expected a JSON object"
+                f"Line {line_number}: expected a JSON object, got {_json_type_name(data)}"
             )
         yield data
 
